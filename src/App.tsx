@@ -16,7 +16,16 @@ export default function App() {
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     try {
       const saved = localStorage.getItem("caisse_transactions");
-      return saved ? JSON.parse(saved) : [];
+      const parsed = saved ? JSON.parse(saved) : [];
+      if (!Array.isArray(parsed)) return [];
+      
+      return parsed.map((t: any) => {
+        if (t.image && !t.images) {
+          const { image, ...rest } = t;
+          return { ...rest, images: [image] };
+        }
+        return t;
+      });
     } catch {
       return [];
     }
@@ -61,7 +70,11 @@ export default function App() {
 
   // Save state continuously to LocalStorage
   useEffect(() => {
-    localStorage.setItem("caisse_transactions", JSON.stringify(transactions));
+    try {
+      localStorage.setItem("caisse_transactions", JSON.stringify(transactions));
+    } catch (error) {
+      console.error("Failed to save transactions to localStorage. Quota exceeded?", error);
+    }
   }, [transactions]);
 
   // 4. Transaction & Sale Handlers with Full-Screen Sequential Loading Dialogs
@@ -71,7 +84,7 @@ export default function App() {
     cashReceived: number;
     changeReturned: number;
     tip: number;
-    image?: string;
+    images?: string[];
   }) => {
     // Formulate transaction layout early to make sure timing works
     const itemWithId: CartItem = {
@@ -101,7 +114,7 @@ export default function App() {
       cashReceived: sale.cashReceived,
       changeReturned: change,
       tip: tip,
-      image: sale.image,
+      images: sale.images,
     };
 
     // First aspect: activate "CHARGEMENT" full screen for 2s
@@ -113,10 +126,10 @@ export default function App() {
       setTransactions((prev) => [newTransaction, ...prev]);
       setIsGlobalRegistered(true);
 
-      // After an additional 1.5s, close "ENREGISTRÉ"
+      // After an additional 2s, close "ENREGISTRÉ"
       setTimeout(() => {
         setIsGlobalRegistered(false);
-      }, 1500);
+      }, 2000);
     }, 2000);
   };
 
@@ -286,8 +299,8 @@ export default function App() {
 
       {/* SUCCESS STATE ON FOREGROUND (NO ANIMATION, NOT FULL SCREEN) */}
       {isGlobalRegistered && (
-        <div id="success-overlay" className="fixed inset-0 z-[9999] flex items-center justify-center p-4 select-none font-sans">
-          <div className="bg-emerald-500 text-white border-4 border-[#141414] p-8 text-center max-w-sm w-full shadow-[8px_8px_0px_#141414] rounded-none">
+        <div id="success-overlay" className="fixed inset-0 z-[9999] flex items-center justify-center p-4 select-none font-sans pointer-events-none">
+          <div className="bg-emerald-500 text-white border-4 border-[#141414] p-8 text-center max-w-sm w-full shadow-[8px_8px_0px_#141414] rounded-none pointer-events-auto">
             <span className="text-4xl mb-3 block">✓</span>
             <h1 className="font-serif italic font-black text-4xl tracking-tighter uppercase mb-2 text-[#141414]">
               ENREGISTRÉ

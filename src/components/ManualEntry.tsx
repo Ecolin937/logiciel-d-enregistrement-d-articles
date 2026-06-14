@@ -3,10 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { CartItem } from "../types";
 import { ArrowRight, Coins, Gift, Landmark, CreditCard, Sparkles, Camera } from "lucide-react";
-import CameraCapture from "./CameraCapture";
 
 interface ManualEntryProps {
   onRegisterSale: (sale: {
@@ -15,7 +14,7 @@ interface ManualEntryProps {
     cashReceived: number;
     changeReturned: number;
     tip: number;
-    image?: string;
+    images?: string[];
   }) => void;
   injectedPrice: number | null;
   injectedCash: number | null;
@@ -38,8 +37,8 @@ export default function ManualEntry({
   const [itemCash, setItemCash] = useState<string>("");
   const [itemChange, setItemChange] = useState<string>("");
   const [itemTip, setItemTip] = useState<string>("");
-  const [itemImage, setItemImage] = useState<string | null>(null);
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [itemImages, setItemImages] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formError, setFormError] = useState<string>("");
 
   // Sync injected price from calculator
@@ -62,6 +61,48 @@ export default function ManualEntry({
       onClearInjectedCash(); // consume the value
     }
   }, [injectedCash, onClearInjectedCash]);
+
+  // Handle manual submit
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            
+            let width = img.width;
+            let height = img.height;
+            const MAX_SIZE = 800;
+            
+            if (width > height) {
+              if (width > MAX_SIZE) {
+                height *= MAX_SIZE / width;
+                width = MAX_SIZE;
+              }
+            } else {
+              if (height > MAX_SIZE) {
+                width *= MAX_SIZE / height;
+                height = MAX_SIZE;
+              }
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            ctx?.drawImage(img, 0, 0, width, height);
+            
+            const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.7);
+            setItemImages(prev => [...prev, compressedDataUrl]);
+          };
+          img.src = reader.result;
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Handle manual submit
   const handleManualSubmit = (e: React.FormEvent) => {
@@ -114,7 +155,7 @@ export default function ManualEntry({
       cashReceived: finalCash,
       changeReturned: finalChange,
       tip: finalTip,
-      image: itemImage || undefined,
+      images: itemImages.length > 0 ? itemImages : undefined,
     });
 
     // Reset form elements
@@ -123,7 +164,7 @@ export default function ManualEntry({
     setItemCash("");
     setItemChange("");
     setItemTip("");
-    setItemImage(null);
+    setItemImages([]);
     setFormError("");
   };
 
@@ -257,31 +298,53 @@ export default function ManualEntry({
                 <Camera className="w-3.5 h-3.5 text-blue-600" />
                 Photo de l'article (Facultatif)
               </label>
-              <button
-                type="button"
-                onClick={() => setIsCameraOpen(true)}
-                className="w-full text-xs font-bold font-mono border-2 border-[#141414] rounded-none py-1.5 px-3 bg-white text-[#141414] focus:outline-none focus:bg-blue-50 hover:bg-neutral-100 transition-all flex items-center justify-center gap-2"
-              >
-                <Camera className="w-4 h-4" />
-                {itemImage ? "Refaire la photo" : "Prendre une photo"}
-              </button>
-              {itemImage && (
-                <div className="mt-2">
-                  <img src={itemImage} alt="Preview" className="w-full h-24 object-cover border-2 border-[#141414]" />
-                  <span className="text-[9px] text-green-700 font-mono font-bold mt-1 block">
-                    Image ajoutée
-                  </span>
+              
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
+                capture="environment"
+                onChange={handleFileChange}
+              />
+              
+              {!itemImages.length ? (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full text-xs font-bold font-mono border-2 border-[#141414] rounded-none py-1.5 px-3 bg-white text-[#141414] focus:outline-none focus:bg-blue-50 cursor-pointer flex items-center justify-center gap-2 hover:bg-neutral-100 transition-all border-dashed"
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                  Ajouter une photo
+                </button>
+              ) : (
+                <div className="mt-2 space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    {itemImages.map((img, idx) => (
+                      <div key={idx} className="relative group w-16 h-16 shrink-0">
+                        <img src={img} alt={`Preview ${idx}`} className="w-full h-full object-cover border-2 border-[#141414]" />
+                        <button
+                          type="button"
+                          onClick={() => setItemImages(prev => prev.filter((_, i) => i !== idx))}
+                          className="absolute -top-1 -right-1 bg-red-600 text-white p-0.5 rounded-full hover:bg-red-700 transition"
+                        >
+                          <span className="text-[8px] font-bold px-1">X</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full text-[10px] font-bold font-mono text-[#141414] bg-white border-2 border-[#141414] px-2 py-1.5 hover:bg-neutral-100 transition-all rounded-none flex items-center justify-center gap-1.5 border-dashed"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    Ajouter une autre photo
+                  </button>
                 </div>
               )}
             </div>
           </div>
-          
-          {isCameraOpen && (
-            <CameraCapture
-              onCapture={(image) => setItemImage(image)}
-              onClose={() => setIsCameraOpen(false)}
-            />
-          )}
 
           {/* Action button */}
           <div className="pt-2 border-t-2 border-dotted border-[#141414]/15">

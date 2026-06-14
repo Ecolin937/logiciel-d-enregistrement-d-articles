@@ -5,7 +5,7 @@
 
 import React, { useMemo, useState } from "react";
 import { Transaction } from "../types";
-import { History, TrendingUp, RefreshCw, BarChart3, AlertCircle, ShoppingBag, ArrowRight, X } from "lucide-react";
+import { History, TrendingUp, RefreshCw, BarChart3, AlertCircle, ShoppingBag, ArrowRight, X, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface HistoryLogProps {
   transactions: Transaction[];
@@ -13,7 +13,8 @@ interface HistoryLogProps {
 }
 
 export default function HistoryLog({ transactions, onClearHistory }: HistoryLogProps) {
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImages, setSelectedImages] = useState<string[] | null>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Compute daily / session statistics (with no VAT/tax whatsoever)
   const stats = useMemo(() => {
@@ -169,12 +170,19 @@ export default function HistoryLog({ transactions, onClearHistory }: HistoryLogP
                       {t.tip && t.tip > 0 ? t.tip.toFixed(2) + "€" : "-"}
                     </div>
 
-                     {/* Photo column */}
-                    <div className="col-span-3 flex justify-end">
-                      {t.image ? (
-                        <button onClick={() => setSelectedImage(t.image!)} className="block focus:outline-none focus:ring-2 focus:ring-[#141414]">
-                          <img src={t.image} alt={mainItemName} className="w-12 h-12 object-cover border-2 border-[#141414] cursor-pointer hover:opacity-80 transition-opacity" />
-                        </button>
+                    {/* Photo column */}
+                    <div className="col-span-3 flex justify-end gap-1">
+                      {t.images && t.images.length > 0 ? (
+                        <>
+                          <button onClick={() => { setSelectedImages(t.images!); setCurrentImageIndex(0); }} className="block focus:outline-none focus:ring-2 focus:ring-[#141414]">
+                            <img src={t.images[0]} alt={mainItemName} className="w-12 h-12 object-cover border-2 border-[#141414] cursor-pointer hover:opacity-80 transition-opacity" />
+                          </button>
+                          {t.images.length > 1 && (
+                            <button onClick={() => { setSelectedImages(t.images!); setCurrentImageIndex(1); }} className="w-12 h-12 flex items-center justify-center bg-[#D1CFC9] border-2 border-[#141414] text-[10px] font-black shrink-0 cursor-pointer hover:bg-[#C1BFB9]">
+                              +{t.images.length - 1}
+                            </button>
+                          )}
+                        </>
                       ) : (
                         <span className="text-neutral-400 font-bold text-[10px]">-</span>
                       )}
@@ -189,15 +197,52 @@ export default function HistoryLog({ transactions, onClearHistory }: HistoryLogP
       )}
 
       {/* Full-screen Image Preview Modal */}
-      {selectedImage && (
-        <div className="fixed inset-0 z-[10001] bg-[#141414]/90 flex items-center justify-center p-4">
+      {selectedImages && (
+        <div className="fixed inset-0 z-[10001] bg-[#141414]/90 flex flex-col items-center justify-center p-4">
           <button
-            onClick={() => setSelectedImage(null)}
-            className="absolute top-6 right-6 p-2 bg-white text-[#141414] rounded-full shadow-lg hover:bg-neutral-200 transition-all"
+            onClick={() => setSelectedImages(null)}
+            className="absolute top-6 right-6 p-2 bg-white text-[#141414] rounded-full shadow-lg hover:bg-neutral-200 transition-all z-50"
           >
             <X className="w-8 h-8" />
           </button>
-          <img src={selectedImage} alt="Agrandissement" className="max-w-full max-h-[80vh] object-contain border-4 border-white shadow-2xl" />
+          
+          <div className="relative w-full max-w-4xl flex items-center justify-center gap-4">
+            {selectedImages.length > 1 && (
+              <button 
+                onClick={() => setCurrentImageIndex(prev => prev > 0 ? prev - 1 : selectedImages!.length - 1)}
+                className="p-3 bg-white text-[#141414] rounded-full shadow-lg hover:bg-neutral-200 transition-all flex-shrink-0"
+              >
+                <ChevronLeft className="w-8 h-8" />
+              </button>
+            )}
+            
+            <div className="flex-1 flex justify-center items-center h-[70vh]">
+              <img src={selectedImages[currentImageIndex]} alt="Agrandissement" className="max-w-full max-h-full object-contain border-4 border-white shadow-2xl" />
+            </div>
+            
+            {selectedImages.length > 1 && (
+              <button 
+                onClick={() => setCurrentImageIndex(prev => prev < selectedImages!.length - 1 ? prev + 1 : 0)}
+                className="p-3 bg-white text-[#141414] rounded-full shadow-lg hover:bg-neutral-200 transition-all flex-shrink-0"
+              >
+                <ChevronRight className="w-8 h-8" />
+              </button>
+            )}
+          </div>
+
+          {selectedImages.length > 1 && (
+            <div className="mt-8 flex gap-3 overflow-x-auto max-w-full pb-2 px-4 shadow-inner">
+              {selectedImages.map((img, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentImageIndex(idx)}
+                  className={`w-20 h-20 shrink-0 border-4 transition-all duration-200 ${idx === currentImageIndex ? 'border-white scale-110 z-10 shadow-lg' : 'border-transparent opacity-50 hover:opacity-100 bg-[#141414] grayscale hover:grayscale-0'}`}
+                >
+                  <img src={img} alt={`Miniature ${idx}`} className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

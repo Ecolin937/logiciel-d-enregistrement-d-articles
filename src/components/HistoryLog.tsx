@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Transaction } from "../types";
-import { History, TrendingUp, RefreshCw, BarChart3, AlertCircle, ShoppingBag, ArrowRight } from "lucide-react";
+import { History, TrendingUp, RefreshCw, BarChart3, AlertCircle, ShoppingBag, ArrowRight, X } from "lucide-react";
 
 interface HistoryLogProps {
   transactions: Transaction[];
@@ -13,6 +13,8 @@ interface HistoryLogProps {
 }
 
 export default function HistoryLog({ transactions, onClearHistory }: HistoryLogProps) {
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
   // Compute daily / session statistics (with no VAT/tax whatsoever)
   const stats = useMemo(() => {
     const count = transactions.length;
@@ -117,13 +119,14 @@ export default function HistoryLog({ transactions, onClearHistory }: HistoryLogP
             </h4>
             
             <div className="border-2 border-[#141414] bg-[#FAF9F6] divide-y-2 divide-[#141414]">
-              {/* Table Header Row visible on larger screens */}
               <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 bg-[#D1CFC9] text-[10px] font-mono font-black border-b-2 border-[#141414] tracking-wide uppercase">
-                <span className="col-span-2">Heure d'ajout</span>
-                <span className="col-span-4">Désignation de l'article</span>
-                <span className="col-span-2 text-right">Prix d'enregistrement</span>
-                <span className="col-span-3 text-center">Espèces / Rendu</span>
-                <span className="col-span-1 text-right">Pourboire</span>
+                <span className="col-span-2">Heure</span>
+                <span className="col-span-2">Article</span>
+                <span className="col-span-2 text-right">Prix</span>
+                <span className="col-span-1 text-center">Reçu</span>
+                <span className="col-span-1 text-center">Rendu</span>
+                <span className="col-span-1 text-center">Tip</span>
+                <span className="col-span-3 text-right">Photo</span>
               </div>
 
               {transactions.map((t) => {
@@ -142,7 +145,7 @@ export default function HistoryLog({ transactions, onClearHistory }: HistoryLogP
                     </div>
 
                     {/* Article designation */}
-                    <div className="col-span-4 font-serif italic font-black text-slate-900 border-l-2 border-[#141414]/10 sm:border-l-0 pl-2 sm:pl-0">
+                    <div className="col-span-2 font-serif italic font-black text-slate-900 border-l-2 border-[#141414]/10 sm:border-l-0 pl-2 sm:pl-0">
                       {mainItemName}
                     </div>
 
@@ -151,26 +154,27 @@ export default function HistoryLog({ transactions, onClearHistory }: HistoryLogP
                       {registerPrice.toFixed(2)} €
                     </div>
 
-                    {/* Cash received and charge returned (Change given) */}
-                    <div className="col-span-3 bg-white/70 sm:bg-transparent border sm:border-0 border-[#141414]/10 p-2 sm:p-0 flex flex-wrap items-center justify-between sm:justify-center gap-x-2 text-[10px] font-mono text-[#141414]/80">
-                      <div className="flex items-center gap-1">
-                        <span className="text-neutral-500 uppercase">Reçu:</span>
-                        <strong className="text-slate-950 font-bold">{t.cashReceived.toFixed(2)} €</strong>
-                      </div>
-                      <span className="text-neutral-300 hidden sm:inline">|</span>
-                      <div className="flex items-center gap-1">
-                        <span className="text-neutral-500 uppercase">Rendu:</span>
-                        <strong className="text-blue-900 font-bold">{t.changeReturned.toFixed(2)} €</strong>
-                      </div>
+                    {/* Cash received (Reçu) */}
+                    <div className="col-span-1 text-center font-bold text-[10px] text-slate-950">
+                      {t.cashReceived.toFixed(2)}€
+                    </div>
+
+                    {/* Cash returned (Rendu) */}
+                    <div className="col-span-1 text-center font-bold text-[10px] text-blue-900">
+                      {t.changeReturned.toFixed(2)}€
                     </div>
 
                     {/* Tip (Pourboire) */}
-                    <div className="col-span-1 text-right flex sm:flex-col justify-between sm:justify-center items-center sm:items-end">
-                      <span className="sm:hidden text-neutral-500 text-[10px] uppercase">Pourboire :</span>
-                      {t.tip && t.tip > 0 ? (
-                        <span className="text-amber-800 font-black bg-amber-50 px-1.5 py-0.5 border border-[#141414]/10 rounded-none text-[10px]">
-                          + {t.tip.toFixed(2)} €
-                        </span>
+                    <div className="col-span-1 text-center font-bold text-[10px] text-amber-800">
+                      {t.tip && t.tip > 0 ? t.tip.toFixed(2) + "€" : "-"}
+                    </div>
+
+                     {/* Photo column */}
+                    <div className="col-span-3 flex justify-end">
+                      {t.image ? (
+                        <button onClick={() => setSelectedImage(t.image!)} className="block focus:outline-none focus:ring-2 focus:ring-[#141414]">
+                          <img src={t.image} alt={mainItemName} className="w-12 h-12 object-cover border-2 border-[#141414] cursor-pointer hover:opacity-80 transition-opacity" />
+                        </button>
                       ) : (
                         <span className="text-neutral-400 font-bold text-[10px]">-</span>
                       )}
@@ -181,6 +185,19 @@ export default function HistoryLog({ transactions, onClearHistory }: HistoryLogP
               })}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Full-screen Image Preview Modal */}
+      {selectedImage && (
+        <div className="fixed inset-0 z-[10001] bg-[#141414]/90 flex items-center justify-center p-4">
+          <button
+            onClick={() => setSelectedImage(null)}
+            className="absolute top-6 right-6 p-2 bg-white text-[#141414] rounded-full shadow-lg hover:bg-neutral-200 transition-all"
+          >
+            <X className="w-8 h-8" />
+          </button>
+          <img src={selectedImage} alt="Agrandissement" className="max-w-full max-h-[80vh] object-contain border-4 border-white shadow-2xl" />
         </div>
       )}
     </div>

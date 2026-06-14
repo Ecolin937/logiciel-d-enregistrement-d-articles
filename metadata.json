@@ -1,6 +1,6 @@
 {
   "name": "Caisse Enregistreuse",
   "description": "Un logiciel de caisse enregistreuse moderne pour enregistrer les articles, calculer les totaux, gérer l'espèce reçue, calculer le rendu de monnaie, avec une calculatrice intégrée.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

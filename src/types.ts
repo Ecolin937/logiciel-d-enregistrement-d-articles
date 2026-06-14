@@ -28,4 +28,5 @@ export interface Transaction {
   cashReceived: number;
   changeReturned: number;
   tip?: number;
+  image?: string;
 }

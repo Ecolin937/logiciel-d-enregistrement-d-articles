@@ -23,7 +23,7 @@ export default function App() {
   });
 
   const [activeView, setActiveView] = useState<'calculator' | 'register' | 'history'>('calculator');
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(true);
   // 2. Integration States (Bridge between Calculator and custom inputs)
   const [injectedPrice, setInjectedPrice] = useState<number | null>(null);
   const [injectedCash, setInjectedCash] = useState<number | null>(null);
@@ -71,6 +71,7 @@ export default function App() {
     cashReceived: number;
     changeReturned: number;
     tip: number;
+    image?: string;
   }) => {
     // Formulate transaction layout early to make sure timing works
     const itemWithId: CartItem = {
@@ -100,6 +101,7 @@ export default function App() {
       cashReceived: sale.cashReceived,
       changeReturned: change,
       tip: tip,
+      image: sale.image,
     };
 
     // First aspect: activate "CHARGEMENT" full screen for 2s
@@ -278,9 +280,6 @@ export default function App() {
             <h1 className="font-serif italic font-black text-4xl tracking-tighter uppercase mb-2">
               CHARGEMENT
             </h1>
-            <p className="font-mono text-[11px] text-neutral-800 uppercase tracking-widest font-black">
-              Veuillez patienter deux secondes...
-            </p>
           </div>
         </div>
       )}

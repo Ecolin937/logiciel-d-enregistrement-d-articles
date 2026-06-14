@@ -5,7 +5,8 @@
 
 import React, { useState, useEffect } from "react";
 import { CartItem } from "../types";
-import { ArrowRight, Coins, Gift, Landmark, CreditCard, Sparkles } from "lucide-react";
+import { ArrowRight, Coins, Gift, Landmark, CreditCard, Sparkles, Camera } from "lucide-react";
+import CameraCapture from "./CameraCapture";
 
 interface ManualEntryProps {
   onRegisterSale: (sale: {
@@ -14,6 +15,7 @@ interface ManualEntryProps {
     cashReceived: number;
     changeReturned: number;
     tip: number;
+    image?: string;
   }) => void;
   injectedPrice: number | null;
   injectedCash: number | null;
@@ -36,6 +38,8 @@ export default function ManualEntry({
   const [itemCash, setItemCash] = useState<string>("");
   const [itemChange, setItemChange] = useState<string>("");
   const [itemTip, setItemTip] = useState<string>("");
+  const [itemImage, setItemImage] = useState<string | null>(null);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [formError, setFormError] = useState<string>("");
 
   // Sync injected price from calculator
@@ -110,6 +114,7 @@ export default function ManualEntry({
       cashReceived: finalCash,
       changeReturned: finalChange,
       tip: finalTip,
+      image: itemImage || undefined,
     });
 
     // Reset form elements
@@ -118,6 +123,7 @@ export default function ManualEntry({
     setItemCash("");
     setItemChange("");
     setItemTip("");
+    setItemImage(null);
     setFormError("");
   };
 
@@ -244,7 +250,38 @@ export default function ManualEntry({
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-700 font-bold text-xs font-mono">€</span>
               </div>
             </div>
+            
+            {/* Photo de l'article - Facultatif */}
+            <div>
+              <label className="block text-[10px] font-mono font-bold text-slate-500 uppercase mb-1.5 flex items-center gap-1">
+                <Camera className="w-3.5 h-3.5 text-blue-600" />
+                Photo de l'article (Facultatif)
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsCameraOpen(true)}
+                className="w-full text-xs font-bold font-mono border-2 border-[#141414] rounded-none py-1.5 px-3 bg-white text-[#141414] focus:outline-none focus:bg-blue-50 hover:bg-neutral-100 transition-all flex items-center justify-center gap-2"
+              >
+                <Camera className="w-4 h-4" />
+                {itemImage ? "Refaire la photo" : "Prendre une photo"}
+              </button>
+              {itemImage && (
+                <div className="mt-2">
+                  <img src={itemImage} alt="Preview" className="w-full h-24 object-cover border-2 border-[#141414]" />
+                  <span className="text-[9px] text-green-700 font-mono font-bold mt-1 block">
+                    Image ajoutée
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
+          
+          {isCameraOpen && (
+            <CameraCapture
+              onCapture={(image) => setItemImage(image)}
+              onClose={() => setIsCameraOpen(false)}
+            />
+          )}
 
           {/* Action button */}
           <div className="pt-2 border-t-2 border-dotted border-[#141414]/15">

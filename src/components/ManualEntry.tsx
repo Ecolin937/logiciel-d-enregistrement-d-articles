@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { CartItem } from "../types";
-import { ArrowRight, Coins, Gift, Landmark, CreditCard, Sparkles, Camera } from "lucide-react";
+import { ArrowRight, Coins, Gift, Landmark, Sparkles, Camera, X } from "lucide-react";
+import CameraModal from "./CameraModal";
 
 interface ManualEntryProps {
   onRegisterSale: (sale: {
@@ -38,8 +39,8 @@ export default function ManualEntry({
   const [itemChange, setItemChange] = useState<string>("");
   const [itemTip, setItemTip] = useState<string>("");
   const [itemImages, setItemImages] = useState<string[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formError, setFormError] = useState<string>("");
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   // Sync injected price from calculator
   useEffect(() => {
@@ -62,46 +63,14 @@ export default function ManualEntry({
     }
   }, [injectedCash, onClearInjectedCash]);
 
-  // Handle manual submit
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          const img = new Image();
-          img.onload = () => {
-            const canvas = document.createElement("canvas");
-            const ctx = canvas.getContext("2d");
-            
-            let width = img.width;
-            let height = img.height;
-            const MAX_SIZE = 800;
-            
-            if (width > height) {
-              if (width > MAX_SIZE) {
-                height *= MAX_SIZE / width;
-                width = MAX_SIZE;
-              }
-            } else {
-              if (height > MAX_SIZE) {
-                width *= MAX_SIZE / height;
-                height = MAX_SIZE;
-              }
-            }
-            
-            canvas.width = width;
-            canvas.height = height;
-            ctx?.drawImage(img, 0, 0, width, height);
-            
-            const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.7);
-            setItemImages(prev => [...prev, compressedDataUrl]);
-          };
-          img.src = reader.result;
-        }
-      };
-      reader.readAsDataURL(file);
-    }
+  // Handle the captured photo from the camera modal
+  const handlePhotoCaptured = (dataUrl: string) => {
+    setItemImages(prev => [...prev, dataUrl]);
+    setIsCameraOpen(false);
+  };
+
+  const removePhoto = (index: number) => {
+    setItemImages(prev => prev.filter((_, i) => i !== index));
   };
 
   // Handle manual submit
@@ -299,23 +268,14 @@ export default function ManualEntry({
                 Photo de l'article (Facultatif)
               </label>
               
-              <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                accept="image/*"
-                capture="environment"
-                onChange={handleFileChange}
-              />
-              
               {!itemImages.length ? (
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => setIsCameraOpen(true)}
                   className="w-full text-xs font-bold font-mono border-2 border-[#141414] rounded-none py-1.5 px-3 bg-white text-[#141414] focus:outline-none focus:bg-blue-50 cursor-pointer flex items-center justify-center gap-2 hover:bg-neutral-100 transition-all border-dashed"
                 >
                   <Camera className="w-3.5 h-3.5" />
-                  Ajouter une photo
+                  Prendre une photo
                 </button>
               ) : (
                 <div className="mt-2 space-y-2">
@@ -325,17 +285,17 @@ export default function ManualEntry({
                         <img src={img} alt={`Preview ${idx}`} className="w-full h-full object-cover border-2 border-[#141414]" />
                         <button
                           type="button"
-                          onClick={() => setItemImages(prev => prev.filter((_, i) => i !== idx))}
-                          className="absolute -top-1 -right-1 bg-red-600 text-white p-0.5 rounded-full hover:bg-red-700 transition"
+                          onClick={() => removePhoto(idx)}
+                          className="absolute -top-1 -right-1 bg-red-600 text-white p-0.5 rounded-full hover:bg-red-700 transition z-10"
                         >
-                          <span className="text-[8px] font-bold px-1">X</span>
+                          <X className="w-2.5 h-2.5" />
                         </button>
                       </div>
                     ))}
                   </div>
                   <button
                     type="button"
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => setIsCameraOpen(true)}
                     className="w-full text-[10px] font-bold font-mono text-[#141414] bg-white border-2 border-[#141414] px-2 py-1.5 hover:bg-neutral-100 transition-all rounded-none flex items-center justify-center gap-1.5 border-dashed"
                   >
                     <Camera className="w-3.5 h-3.5" />
@@ -371,6 +331,13 @@ export default function ManualEntry({
           )}
         </form>
       </div>
+
+      {isCameraOpen && (
+        <CameraModal 
+          onCapture={handlePhotoCaptured} 
+          onClose={() => setIsCameraOpen(false)} 
+        />
+      )}
     </div>
   );
 }

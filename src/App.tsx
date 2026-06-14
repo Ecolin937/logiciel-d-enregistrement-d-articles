@@ -9,7 +9,7 @@ import { CartItem, Transaction } from "./types";
 import ManualEntry from "./components/ManualEntry";
 import Calculator from "./components/Calculator";
 import HistoryLog from "./components/HistoryLog";
-import { Store, Clock, CheckCircle2, DollarSign, Calculator as CalcIcon, AlertTriangle } from "lucide-react";
+import { Store, Clock, CheckCircle2, DollarSign, Calculator as CalcIcon, AlertTriangle, Camera } from "lucide-react";
 
 export default function App() {
   // 1. Core Cash Register States
@@ -18,14 +18,7 @@ export default function App() {
       const saved = localStorage.getItem("caisse_transactions");
       const parsed = saved ? JSON.parse(saved) : [];
       if (!Array.isArray(parsed)) return [];
-      
-      return parsed.map((t: any) => {
-        if (t.image && !t.images) {
-          const { image, ...rest } = t;
-          return { ...rest, images: [image] };
-        }
-        return t;
-      });
+      return parsed;
     } catch {
       return [];
     }
@@ -33,6 +26,27 @@ export default function App() {
 
   const [activeView, setActiveView] = useState<'calculator' | 'register' | 'history'>('calculator');
   const [isMenuOpen, setIsMenuOpen] = useState(true);
+
+  // Camera Permission Welcome State
+  const [showCameraPrompt, setShowCameraPrompt] = useState(false);
+
+  useEffect(() => {
+    const hasPrompted = localStorage.getItem("caisse_camera_prompted");
+    if (!hasPrompted) {
+      setShowCameraPrompt(true);
+    }
+  }, []);
+
+  const handleAllowCamera = () => {
+    localStorage.setItem("caisse_camera_prompted", "true");
+    setShowCameraPrompt(false);
+  };
+
+  const handleDismissCamera = () => {
+    localStorage.setItem("caisse_camera_prompted", "true");
+    setShowCameraPrompt(false);
+  };
+
   // 2. Integration States (Bridge between Calculator and custom inputs)
   const [injectedPrice, setInjectedPrice] = useState<number | null>(null);
   const [injectedCash, setInjectedCash] = useState<number | null>(null);
@@ -308,6 +322,35 @@ export default function App() {
             <p className="font-mono text-[11px] text-white uppercase tracking-widest font-black bg-[#141414] px-3 py-1.5 inline-block">
               TRANSACTION VALIDÉE !
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* CAMERA PROMPT MODAL */}
+      {showCameraPrompt && (
+        <div className="fixed inset-0 z-[10005] bg-[#141414]/90 flex items-center justify-center p-4 font-sans select-none">
+          <div className="bg-white border-4 border-[#141414] p-6 max-w-sm w-full shadow-[8px_8px_0px_#141414] flex flex-col items-center text-center">
+            <div className="w-16 h-16 bg-blue-100 border-4 border-[#141414] flex items-center justify-center mb-4 text-blue-600 rounded-full">
+              <Camera className="w-8 h-8" />
+            </div>
+            <h2 className="font-black text-xl mb-2 text-[#141414] uppercase">Accès Caméra</h2>
+            <p className="text-sm font-medium text-neutral-600 mb-6">
+              Ce système de caisse utilise la caméra pour prendre en photo les articles enregistrés. Veuillez autoriser l'accès à la caméra pour utiliser cette fonctionnalité.
+            </p>
+            <div className="flex flex-col gap-3 w-full">
+              <button
+                onClick={handleAllowCamera}
+                className="w-full font-black text-sm uppercase py-3 bg-blue-600 text-white border-2 border-[#141414] hover:bg-blue-700 transition-colors shadow-[4px_4px_0px_#141414] cursor-pointer"
+              >
+                Autoriser l'accès
+              </button>
+              <button
+                onClick={handleDismissCamera}
+                className="w-full font-bold text-sm uppercase py-2 bg-transparent text-neutral-500 hover:text-[#141414] transition-colors cursor-pointer"
+              >
+                Plus tard
+              </button>
+            </div>
           </div>
         </div>
       )}

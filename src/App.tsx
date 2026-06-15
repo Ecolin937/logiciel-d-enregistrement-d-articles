@@ -9,7 +9,7 @@ import { CartItem, Transaction } from "./types";
 import ManualEntry from "./components/ManualEntry";
 import Calculator from "./components/Calculator";
 import HistoryLog from "./components/HistoryLog";
-import { Store, Clock, CheckCircle2, DollarSign, Calculator as CalcIcon, AlertTriangle, Camera } from "lucide-react";
+import { Store, Clock, CheckCircle2, DollarSign, Calculator as CalcIcon, AlertTriangle, Camera, Maximize, Minimize } from "lucide-react";
 
 export default function App() {
   // 1. Core Cash Register States
@@ -26,6 +26,25 @@ export default function App() {
 
   const [activeView, setActiveView] = useState<'calculator' | 'register' | 'history'>('calculator');
   const [isMenuOpen, setIsMenuOpen] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch((err) => {
+        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
 
   // Camera Permission Welcome State
   const [showCameraPrompt, setShowCameraPrompt] = useState(false);
@@ -182,12 +201,21 @@ export default function App() {
         </div>
 
         {/* NAVIGATION MENU TRIGGER */}
-        <button
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className="px-4 py-2 text-xs font-black font-mono border-2 border-[#141414] bg-[#141414] text-white uppercase tracking-wider"
-        >
-          MENU
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="px-4 py-2 text-xs font-black font-mono border-2 border-[#141414] bg-[#141414] text-white uppercase tracking-wider"
+          >
+            MENU
+          </button>
+          <button
+            onClick={toggleFullscreen}
+            className="p-2 border-2 border-[#141414] bg-white hover:bg-neutral-100 transition-colors"
+            title="Plein écran"
+          >
+            {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+          </button>
+        </div>
 
         <div className="flex items-center gap-4">
           <div className="text-right font-mono text-xs hidden sm:block">

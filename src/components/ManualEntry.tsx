@@ -7,6 +7,7 @@ import React, { useState, useEffect } from "react";
 import { CartItem } from "../types";
 import { ArrowRight, Coins, Gift, Landmark, Sparkles, Camera, X } from "lucide-react";
 import CameraModal from "./CameraModal";
+import VirtualKeyboard from "./VirtualKeyboard";
 
 interface ManualEntryProps {
   onRegisterSale: (sale: {
@@ -41,6 +42,9 @@ export default function ManualEntry({
   const [itemImages, setItemImages] = useState<string[]>([]);
   const [formError, setFormError] = useState<string>("");
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  
+  // Virtual Keyboard state
+  const [activeInput, setActiveInput] = useState<"name" | "price" | "cash" | "change" | "tip" | null>(null);
 
   // Sync injected price from calculator
   useEffect(() => {
@@ -142,6 +146,27 @@ export default function ManualEntry({
   const currentCashNum = parseFloat(itemCash) || 0;
   const computedChange = Math.max(0, currentCashNum - currentPriceNum);
 
+  const getKeyboardValue = () => {
+    switch (activeInput) {
+      case "name": return itemName;
+      case "price": return itemPrice;
+      case "cash": return itemCash;
+      case "change": return itemChange;
+      case "tip": return itemTip;
+      default: return "";
+    }
+  };
+
+  const setKeyboardValue = (val: string) => {
+    switch (activeInput) {
+      case "name": setItemName(val); break;
+      case "price": setItemPrice(val); break;
+      case "cash": setItemCash(val); break;
+      case "change": setItemChange(val); break;
+      case "tip": setItemTip(val); break;
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Saisie Manuelle de l'Article */}
@@ -163,10 +188,12 @@ export default function ManualEntry({
               <input
                 id="item-name"
                 type="text"
+                readOnly
+                inputMode="none"
+                onClick={() => setActiveInput("name")}
                 value={itemName}
                 placeholder="Ex. BAGUETTE CHAUDE, CAFE LONG, FORMULE MIDI..."
-                onChange={(e) => setItemName(e.target.value)}
-                className="w-full text-sm font-mono border-2 border-[#141414] rounded-none px-3 py-2 bg-white text-[#141414] focus:outline-none focus:bg-yellow-50 focus:ring-0 placeholder-neutral-400 font-medium transition-all"
+                className="w-full text-sm font-mono border-2 border-[#141414] rounded-none px-3 py-2 bg-white text-[#141414] focus:outline-none focus:bg-yellow-50 focus:ring-0 placeholder-neutral-400 font-medium transition-all cursor-pointer"
               />
             </div>
 
@@ -178,13 +205,13 @@ export default function ManualEntry({
               <div className="relative">
                 <input
                   id="item-price"
-                  type="number"
-                  step="0.01"
-                  min="0"
+                  type="text"
+                  readOnly
+                  inputMode="none"
+                  onClick={() => setActiveInput("price")}
                   value={itemPrice}
                   placeholder="0.00"
-                  onChange={(e) => setItemPrice(e.target.value)}
-                  className="w-full text-sm font-bold font-mono border-2 border-[#141414] rounded-none pl-3 pr-8 py-2 bg-white text-[#141414] focus:outline-none focus:bg-yellow-50 focus:ring-0 placeholder-neutral-400 transition-all"
+                  className="w-full text-sm font-bold font-mono border-2 border-[#141414] rounded-none pl-3 pr-8 py-2 bg-white text-[#141414] focus:outline-none focus:bg-yellow-50 focus:ring-0 placeholder-neutral-400 transition-all cursor-pointer"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-700 font-bold text-xs font-mono">€</span>
               </div>
@@ -202,13 +229,13 @@ export default function ManualEntry({
               <div className="relative">
                 <input
                   id="item-cash"
-                  type="number"
-                  step="0.01"
-                  min="0"
+                  type="text"
+                  readOnly
+                  inputMode="none"
+                  onClick={() => setActiveInput("cash")}
                   value={itemCash}
                   placeholder={itemPrice ? parseFloat(itemPrice).toFixed(2) : "0.00"}
-                  onChange={(e) => setItemCash(e.target.value)}
-                  className="w-full text-xs font-bold font-mono border-2 border-[#141414] rounded-none pl-3 pr-8 py-2 bg-white text-[#141414] focus:outline-none focus:bg-emerald-50 focus:ring-0 placeholder-neutral-400"
+                  className="w-full text-xs font-bold font-mono border-2 border-[#141414] rounded-none pl-3 pr-8 py-2 bg-white text-[#141414] focus:outline-none focus:bg-emerald-50 focus:ring-0 placeholder-neutral-400 cursor-pointer"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-700 font-bold text-xs font-mono">€</span>
               </div>
@@ -223,13 +250,13 @@ export default function ManualEntry({
               <div className="relative">
                 <input
                   id="item-change"
-                  type="number"
-                  step="0.01"
-                  min="0"
+                  type="text"
+                  readOnly
+                  inputMode="none"
+                  onClick={() => setActiveInput("change")}
                   value={itemChange}
                   placeholder={computedChange > 0 ? computedChange.toFixed(2) : "Automatique"}
-                  onChange={(e) => setItemChange(e.target.value)}
-                  className="w-full text-xs font-bold font-mono border-2 border-[#141414] rounded-none pl-3 pr-8 py-2 bg-white text-[#141414] focus:outline-none focus:bg-yellow-50 focus:ring-0 placeholder-slate-400"
+                  className="w-full text-xs font-bold font-mono border-2 border-[#141414] rounded-none pl-3 pr-8 py-2 bg-white text-[#141414] focus:outline-none focus:bg-yellow-50 focus:ring-0 placeholder-slate-400 cursor-pointer"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-700 font-bold text-xs font-mono">€</span>
               </div>
@@ -249,13 +276,13 @@ export default function ManualEntry({
               <div className="relative">
                 <input
                   id="item-tip"
-                  type="number"
-                  step="0.01"
-                  min="0"
+                  type="text"
+                  readOnly
+                  inputMode="none"
+                  onClick={() => setActiveInput("tip")}
                   value={itemTip}
                   placeholder="0.00"
-                  onChange={(e) => setItemTip(e.target.value)}
-                  className="w-full text-xs font-bold font-mono border-2 border-[#141414] rounded-none pl-3 pr-8 py-2 bg-white text-[#141414] focus:outline-none focus:bg-yellow-50 focus:ring-0 placeholder-slate-400"
+                  className="w-full text-xs font-bold font-mono border-2 border-[#141414] rounded-none pl-3 pr-8 py-2 bg-white text-[#141414] focus:outline-none focus:bg-yellow-50 focus:ring-0 placeholder-slate-400 cursor-pointer"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-700 font-bold text-xs font-mono">€</span>
               </div>
@@ -336,6 +363,22 @@ export default function ManualEntry({
         <CameraModal 
           onCapture={handlePhotoCaptured} 
           onClose={() => setIsCameraOpen(false)} 
+        />
+      )}
+
+      {activeInput && (
+        <VirtualKeyboard
+          type={activeInput === "name" ? "text" : "numeric"}
+          value={getKeyboardValue()}
+          onChange={setKeyboardValue}
+          onClose={() => setActiveInput(null)}
+          placeholder={
+            activeInput === "name" ? "Ex. BAGUETTE CHAUDE..." :
+            activeInput === "price" ? "0.00" :
+            activeInput === "cash" ? (itemPrice ? parseFloat(itemPrice).toFixed(2) : "0.00") :
+            activeInput === "change" ? (computedChange > 0 ? computedChange.toFixed(2) : "Calcul Automatique") :
+            "0.00"
+          }
         />
       )}
     </div>

@@ -29,4 +29,6 @@ export interface Transaction {
   changeReturned: number;
   tip?: number;
   images?: string[];
+  comment?: string;
+  condition?: string;
 }

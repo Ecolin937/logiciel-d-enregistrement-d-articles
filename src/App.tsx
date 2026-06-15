@@ -42,8 +42,35 @@ export default function App() {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
     };
+
+    let hasAutoTriggered = false;
+    const attemptAutoFullscreen = () => {
+      if (hasAutoTriggered) return;
+      
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().then(() => {
+          hasAutoTriggered = true;
+          document.removeEventListener("click", attemptAutoFullscreen);
+          document.removeEventListener("touchstart", attemptAutoFullscreen);
+        }).catch(() => {
+          // Ignore, will retry on next click
+        });
+      } else {
+        hasAutoTriggered = true;
+        document.removeEventListener("click", attemptAutoFullscreen);
+        document.removeEventListener("touchstart", attemptAutoFullscreen);
+      }
+    };
+
     document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("click", attemptAutoFullscreen);
+    document.addEventListener("touchstart", attemptAutoFullscreen, { passive: true });
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("click", attemptAutoFullscreen);
+      document.removeEventListener("touchstart", attemptAutoFullscreen);
+    };
   }, []);
 
   // Camera Permission Welcome State
@@ -124,6 +151,8 @@ export default function App() {
     changeReturned: number;
     tip: number;
     images?: string[];
+    comment?: string;
+    condition?: string;
   }) => {
     // Formulate transaction layout early to make sure timing works
     const itemWithId: CartItem = {
@@ -154,6 +183,8 @@ export default function App() {
       changeReturned: change,
       tip: tip,
       images: sale.images,
+      comment: sale.comment,
+      condition: sale.condition,
     };
 
     // First aspect: activate "CHARGEMENT" full screen for 2s

@@ -146,8 +146,18 @@ export default function HistoryLog({ transactions, onClearHistory }: HistoryLogP
                     </div>
 
                     {/* Article designation */}
-                    <div className="col-span-2 font-serif italic font-black text-slate-900 border-l-2 border-[#141414]/10 sm:border-l-0 pl-2 sm:pl-0">
-                      {mainItemName}
+                    <div className="col-span-2 border-l-2 border-[#141414]/10 sm:border-l-0 pl-2 sm:pl-0 flex flex-col items-start gap-1">
+                      <span className="font-serif italic font-black text-slate-900">{mainItemName}</span>
+                      {t.condition && (
+                        <span className="bg-[#141414] text-white px-1.5 py-0.5 text-[8px] uppercase tracking-wider whitespace-nowrap">
+                          {t.condition}
+                        </span>
+                      )}
+                      {t.comment && (
+                        <span className="text-[9px] text-neutral-500 truncate w-full max-w-[120px]" title={t.comment}>
+                          "{t.comment}"
+                        </span>
+                      )}
                     </div>
 
                     {/* Price in euros */}

@@ -17,6 +17,8 @@ interface ManualEntryProps {
     changeReturned: number;
     tip: number;
     images?: string[];
+    comment?: string;
+    condition?: string;
   }) => void;
   injectedPrice: number | null;
   injectedCash: number | null;
@@ -40,11 +42,13 @@ export default function ManualEntry({
   const [itemChange, setItemChange] = useState<string>("");
   const [itemTip, setItemTip] = useState<string>("");
   const [itemImages, setItemImages] = useState<string[]>([]);
+  const [itemComment, setItemComment] = useState<string>("");
+  const [itemCondition, setItemCondition] = useState<string>("");
   const [formError, setFormError] = useState<string>("");
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   
   // Virtual Keyboard state
-  const [activeInput, setActiveInput] = useState<"name" | "price" | "cash" | "change" | "tip" | null>(null);
+  const [activeInput, setActiveInput] = useState<"name" | "price" | "cash" | "change" | "tip" | "comment" | null>(null);
 
   // Sync injected price from calculator
   useEffect(() => {
@@ -129,6 +133,8 @@ export default function ManualEntry({
       changeReturned: finalChange,
       tip: finalTip,
       images: itemImages.length > 0 ? itemImages : undefined,
+      comment: itemComment.trim() || undefined,
+      condition: itemCondition || undefined,
     });
 
     // Reset form elements
@@ -138,6 +144,8 @@ export default function ManualEntry({
     setItemChange("");
     setItemTip("");
     setItemImages([]);
+    setItemComment("");
+    setItemCondition("");
     setFormError("");
   };
 
@@ -153,6 +161,7 @@ export default function ManualEntry({
       case "cash": return itemCash;
       case "change": return itemChange;
       case "tip": return itemTip;
+      case "comment": return itemComment;
       default: return "";
     }
   };
@@ -164,6 +173,7 @@ export default function ManualEntry({
       case "cash": setItemCash(val); break;
       case "change": setItemChange(val); break;
       case "tip": setItemTip(val); break;
+      case "comment": setItemComment(val); break;
     }
   };
 
@@ -326,10 +336,49 @@ export default function ManualEntry({
                     className="w-full text-[10px] font-bold font-mono text-[#141414] bg-white border-2 border-[#141414] px-2 py-1.5 hover:bg-neutral-100 transition-all rounded-none flex items-center justify-center gap-1.5 border-dashed"
                   >
                     <Camera className="w-3.5 h-3.5" />
-                    Ajouter une autre photo
+                    Ajouter une photo
                   </button>
                 </div>
               )}
+            </div>
+            
+            {/* Commentaire de l'article - Facultatif */}
+            <div className="md:col-span-2">
+              <label htmlFor="item-comment" className="block text-[10px] font-mono font-bold text-slate-500 uppercase mb-1.5">
+                Commentaire supplémentaire (Facultatif)
+              </label>
+              <input
+                id="item-comment"
+                type="text"
+                readOnly
+                inputMode="none"
+                onClick={() => setActiveInput("comment")}
+                value={itemComment}
+                placeholder="Ex. Emballage abîmé, client habituel..."
+                className="w-full text-sm font-mono border-2 border-[#141414] rounded-none px-3 py-2 bg-white text-[#141414] focus:outline-none focus:bg-yellow-50 focus:ring-0 placeholder-neutral-400 font-medium transition-all cursor-pointer"
+              />
+            </div>
+
+            {/* État de l'article */}
+            <div className="md:col-span-3 pb-2">
+              <label className="block text-[10px] font-mono font-bold text-slate-500 uppercase mb-2">
+                État de l'article (Facultatif)
+              </label>
+              <div className="flex flex-wrap gap-3">
+                {['Très bon état', 'Moyen état', 'Mauvais état'].map((condition) => (
+                  <label key={condition} className={`flex items-center gap-2 text-xs font-mono font-bold px-3 py-1.5 border-2 border-[#141414] cursor-pointer transition-all ${itemCondition === condition ? 'bg-[#141414] text-white' : 'bg-white text-[#141414] hover:bg-neutral-100'}`}>
+                    <input
+                      type="radio"
+                      name="itemCondition"
+                      value={condition}
+                      checked={itemCondition === condition}
+                      onChange={(e) => setItemCondition(e.target.value)}
+                      className="hidden"
+                    />
+                    {condition}
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -368,12 +417,13 @@ export default function ManualEntry({
 
       {activeInput && (
         <VirtualKeyboard
-          type={activeInput === "name" ? "text" : "numeric"}
+          type={activeInput === "name" || activeInput === "comment" ? "text" : "numeric"}
           value={getKeyboardValue()}
           onChange={setKeyboardValue}
           onClose={() => setActiveInput(null)}
           placeholder={
             activeInput === "name" ? "Ex. BAGUETTE CHAUDE..." :
+            activeInput === "comment" ? "Commentaire..." :
             activeInput === "price" ? "0.00" :
             activeInput === "cash" ? (itemPrice ? parseFloat(itemPrice).toFixed(2) : "0.00") :
             activeInput === "change" ? (computedChange > 0 ? computedChange.toFixed(2) : "Calcul Automatique") :

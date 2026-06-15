@@ -37,7 +37,13 @@ export default function App() {
     }
   }, []);
 
-  const handleAllowCamera = () => {
+  const handleAllowCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream.getTracks().forEach(track => track.stop());
+    } catch (e) {
+      console.error("Camera access denied or error", e);
+    }
     localStorage.setItem("caisse_camera_prompted", "true");
     setShowCameraPrompt(false);
   };

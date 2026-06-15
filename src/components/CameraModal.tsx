@@ -14,34 +14,60 @@ export default function CameraModal({ onCapture, onClose }: CameraModalProps) {
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
   const [error, setError] = useState("");
 
-  const startCamera = async () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-    }
-    setError("");
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode }
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-    } catch (err: any) {
-      console.error("Camera error:", err);
-      setError("Impossible d'accéder à la caméra. Vérifiez les permissions.");
-    }
-  };
-
   useEffect(() => {
-    startCamera();
-    return () => {
+    let isMounted = true;
+
+    const startCamera = async () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
+      setError("");
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode }
+        });
+        
+        if (!isMounted) {
+          stream.getTracks().forEach(track => track.stop());
+          return;
+        }
+
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          console.error("Camera error:", err);
+          setError("Impossible d'accéder à la caméra. Vérifiez les permissions.");
+        }
+      }
+    };
+
+    startCamera();
+
+    return () => {
+      isMounted = false;
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
     };
   }, [facingMode]);
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  };
 
   const handleCapture = () => {
     if (videoRef.current && canvasRef.current) {
@@ -56,14 +82,21 @@ export default function CameraModal({ onCapture, onClose }: CameraModalProps) {
       
       // Compress and get data URL
       const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+      
+      stopCamera();
       onCapture(dataUrl);
     }
+  };
+
+  const handleClose = () => {
+    stopCamera();
+    onClose();
   };
 
   return (
     <div className="fixed inset-0 z-[10002] bg-[#141414] flex flex-col items-center justify-center font-sans">
       <div className="w-full bg-[#141414] text-white p-4 flex justify-between items-center absolute top-0 left-0 z-10">
-        <button onClick={onClose} className="p-2 bg-neutral-800 rounded-full hover:bg-neutral-700">
+        <button onClick={handleClose} className="p-2 bg-neutral-800 rounded-full hover:bg-neutral-700">
           <X className="w-6 h-6" />
         </button>
         <div className="font-mono text-sm font-bold tracking-widest uppercase">

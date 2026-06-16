@@ -36,11 +36,7 @@ export default function ManualEntry({
   isProcessing,
 }: ManualEntryProps) {
   // Manual form states
-  const [itemName, setItemName] = useState<string>("");
-  const [itemPrice, setItemPrice] = useState<string>("");
-  const [itemCash, setItemCash] = useState<string>("");
-  const [itemChange, setItemChange] = useState<string>("");
-  const [itemTip, setItemTip] = useState<string>("");
+  const [itemCode, setItemCode] = useState<string>("");
   const [itemImages, setItemImages] = useState<string[]>([]);
   const [itemComment, setItemComment] = useState<string>("");
   const [itemCondition, setItemCondition] = useState<string>("");
@@ -48,26 +44,18 @@ export default function ManualEntry({
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   
   // Virtual Keyboard state
-  const [activeInput, setActiveInput] = useState<"name" | "price" | "cash" | "change" | "tip" | "comment" | null>(null);
+  const [activeInput, setActiveInput] = useState<"code" | "comment" | null>(null);
 
-  // Sync injected price from calculator
+  // Consume/clear any calculator injected values silently
   useEffect(() => {
     if (injectedPrice !== null) {
-      setItemPrice(injectedPrice.toFixed(2));
-      onClearInjectedPrice(); // consume the value
-
-      // If item name is empty, provide a default designation
-      if (!itemName) {
-        setItemName("Article Saisi");
-      }
+      onClearInjectedPrice();
     }
-  }, [injectedPrice, itemName, onClearInjectedPrice]);
+  }, [injectedPrice, onClearInjectedPrice]);
 
-  // Sync injected cash from calculator
   useEffect(() => {
     if (injectedCash !== null) {
-      setItemCash(injectedCash.toFixed(2));
-      onClearInjectedCash(); // consume the value
+      onClearInjectedCash();
     }
   }, [injectedCash, onClearInjectedCash]);
 
@@ -87,80 +75,39 @@ export default function ManualEntry({
     if (isProcessing) return;
     setFormError("");
 
-    if (!itemName.trim()) {
-      setFormError("Veuillez saisir le nom de l'article.");
+    if (!itemCode.trim()) {
+      setFormError("Veuillez saisir le code de l'article (chiffres).");
       return;
     }
 
-    const parsedPrice = parseFloat(itemPrice);
-    if (isNaN(parsedPrice) || parsedPrice < 0) {
-      setFormError("Veuillez saisir un prix valide (ex: 2.50).");
+    if (!/^\d+$/.test(itemCode.trim())) {
+      setFormError("Le code de l'article doit contenir uniquement des chiffres.");
       return;
     }
 
-    // Parsing new payment and tip values
-    const parsedCash = parseFloat(itemCash);
-    const finalCash = isNaN(parsedCash) ? parsedPrice : parsedCash;
-
-    // Change returned parsing (optional)
-    let finalChange = 0;
-    if (itemChange.trim() !== "") {
-      const parsedChange = parseFloat(itemChange);
-      finalChange = isNaN(parsedChange) ? 0 : parsedChange;
-    } else {
-      // If kept blank, auto-compute change if more cash was received
-      finalChange = Math.max(0, finalCash - parsedPrice);
-    }
-
-    // Tip parsing (optional)
-    let finalTip = 0;
-    if (itemTip.trim() !== "") {
-      const parsedTip = parseFloat(itemTip);
-      finalTip = isNaN(parsedTip) ? 0 : parsedTip;
-    }
-
-    // Validation: make sure client paid enough if they explicitly fill the cashReceived
-    if (finalCash < parsedPrice) {
-      setFormError(`Le client n'a pas donné assez d'espèces (${finalCash.toFixed(2)} € < ${parsedPrice.toFixed(2)} €).`);
-      return;
-    }
-
-    // Add directly to sales history via parent controller
+    // Add directly to sales history via parent controller with default numeric stats
     onRegisterSale({
-      name: itemName.trim(),
-      price: parsedPrice,
-      cashReceived: finalCash,
-      changeReturned: finalChange,
-      tip: finalTip,
+      name: `Code: ${itemCode.trim()}`,
+      price: 0,
+      cashReceived: 0,
+      changeReturned: 0,
+      tip: 0,
       images: itemImages.length > 0 ? itemImages : undefined,
       comment: itemComment.trim() || undefined,
       condition: itemCondition || undefined,
     });
 
     // Reset form elements
-    setItemName("");
-    setItemPrice("");
-    setItemCash("");
-    setItemChange("");
-    setItemTip("");
+    setItemCode("");
     setItemImages([]);
     setItemComment("");
     setItemCondition("");
     setFormError("");
   };
 
-  // Live auto-change calculation for visual help
-  const currentPriceNum = parseFloat(itemPrice) || 0;
-  const currentCashNum = parseFloat(itemCash) || 0;
-  const computedChange = Math.max(0, currentCashNum - currentPriceNum);
-
   const getKeyboardValue = () => {
     switch (activeInput) {
-      case "name": return itemName;
-      case "price": return itemPrice;
-      case "cash": return itemCash;
-      case "change": return itemChange;
-      case "tip": return itemTip;
+      case "code": return itemCode;
       case "comment": return itemComment;
       default: return "";
     }
@@ -168,12 +115,13 @@ export default function ManualEntry({
 
   const setKeyboardValue = (val: string) => {
     switch (activeInput) {
-      case "name": setItemName(val); break;
-      case "price": setItemPrice(val); break;
-      case "cash": setItemCash(val); break;
-      case "change": setItemChange(val); break;
-      case "tip": setItemTip(val); break;
-      case "comment": setItemComment(val); break;
+      case "code":
+        // Strip out non-digits to ensure it remains strictly numeric
+        setItemCode(val.replace(/[^0-9]/g, ""));
+        break;
+      case "comment":
+        setItemComment(val);
+        break;
     }
   };
 
@@ -188,116 +136,46 @@ export default function ManualEntry({
         </h3>
 
         <form onSubmit={handleManualSubmit} className="space-y-5">
-          {/* Main article inputs */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-            {/* Nom de l'article */}
-            <div className="md:col-span-8">
-              <label id="input-label-name" htmlFor="item-name" className="block text-[10px] font-mono font-bold text-slate-500 uppercase mb-1.5">
-                Désignation de l'Article
+          {/* Main article code input */}
+          <div className="grid grid-cols-1 gap-4">
+            {/* Code de l'article */}
+            <div>
+              <label id="input-label-code" htmlFor="item-code" className="block text-xs font-mono font-bold text-slate-700 uppercase mb-1.5">
+                Code de l'Article (uniquement des chiffres) <span className="text-red-500">*</span>
               </label>
               <input
-                id="item-name"
+                id="item-code"
                 type="text"
                 readOnly
                 inputMode="none"
-                onClick={() => setActiveInput("name")}
-                value={itemName}
-                placeholder="Ex. BAGUETTE CHAUDE, CAFE LONG, FORMULE MIDI..."
+                onClick={() => setActiveInput("code")}
+                value={itemCode}
+                placeholder="Saisissez un code numérique (ex: 847293)..."
+                className="w-full text-base font-mono font-bold border-2 border-[#141414] rounded-none px-3 py-3 bg-white text-[#141414] focus:outline-none focus:bg-yellow-50 focus:ring-0 placeholder-neutral-400 transition-all cursor-pointer shadow-inner"
+              />
+            </div>
+          </div>
+
+          {/* Commentaire, État et Photo */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-3 border-t-2 border-dashed border-[#141414]/15">
+            
+            {/* Commentaire de l'article - Facultatif */}
+            <div>
+              <label id="input-label-comment" htmlFor="item-comment" className="block text-[10px] font-mono font-bold text-slate-500 uppercase mb-1.5">
+                Commentaire supplémentaire (Facultatif)
+              </label>
+              <input
+                id="item-comment"
+                type="text"
+                readOnly
+                inputMode="none"
+                onClick={() => setActiveInput("comment")}
+                value={itemComment}
+                placeholder="Ex. Emballage abîmé, client habituel..."
                 className="w-full text-sm font-mono border-2 border-[#141414] rounded-none px-3 py-2 bg-white text-[#141414] focus:outline-none focus:bg-yellow-50 focus:ring-0 placeholder-neutral-400 font-medium transition-all cursor-pointer"
               />
             </div>
 
-            {/* Prix de l'article */}
-            <div className="md:col-span-4">
-              <label id="input-label-price" htmlFor="item-price" className="block text-[10px] font-mono font-bold text-slate-500 uppercase mb-1.5">
-                P.U. (€)
-              </label>
-              <div className="relative">
-                <input
-                  id="item-price"
-                  type="text"
-                  readOnly
-                  inputMode="none"
-                  onClick={() => setActiveInput("price")}
-                  value={itemPrice}
-                  placeholder="0.00"
-                  className="w-full text-sm font-bold font-mono border-2 border-[#141414] rounded-none pl-3 pr-8 py-2 bg-white text-[#141414] focus:outline-none focus:bg-yellow-50 focus:ring-0 placeholder-neutral-400 transition-all cursor-pointer"
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-700 font-bold text-xs font-mono">€</span>
-              </div>
-            </div>
-          </div>
-
-          {/* New specific fields added per request */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-3 border-t-2 border-dashed border-[#141414]/15">
-            {/* Especes données par le client */}
-            <div>
-              <label id="input-label-cash" htmlFor="item-cash" className="block text-[10px] font-mono font-bold text-emerald-700 uppercase mb-1.5 flex items-center gap-1">
-                <Coins className="w-3.5 h-3.5" />
-                Espèces données par le client
-              </label>
-              <div className="relative">
-                <input
-                  id="item-cash"
-                  type="text"
-                  readOnly
-                  inputMode="none"
-                  onClick={() => setActiveInput("cash")}
-                  value={itemCash}
-                  placeholder={itemPrice ? parseFloat(itemPrice).toFixed(2) : "0.00"}
-                  className="w-full text-xs font-bold font-mono border-2 border-[#141414] rounded-none pl-3 pr-8 py-2 bg-white text-[#141414] focus:outline-none focus:bg-emerald-50 focus:ring-0 placeholder-neutral-400 cursor-pointer"
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-700 font-bold text-xs font-mono">€</span>
-              </div>
-            </div>
-
-            {/* Argent rendu (Rendu monnaie) - Facultatif */}
-            <div>
-              <label id="input-label-change" htmlFor="item-change" className="block text-[10px] font-mono font-bold text-slate-500 uppercase mb-1.5 flex items-center gap-1">
-                <Landmark className="w-3.5 h-3.5" />
-                Argent rendu (Facultatif)
-              </label>
-              <div className="relative">
-                <input
-                  id="item-change"
-                  type="text"
-                  readOnly
-                  inputMode="none"
-                  onClick={() => setActiveInput("change")}
-                  value={itemChange}
-                  placeholder={computedChange > 0 ? computedChange.toFixed(2) : "Automatique"}
-                  className="w-full text-xs font-bold font-mono border-2 border-[#141414] rounded-none pl-3 pr-8 py-2 bg-white text-[#141414] focus:outline-none focus:bg-yellow-50 focus:ring-0 placeholder-slate-400 cursor-pointer"
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-700 font-bold text-xs font-mono">€</span>
-              </div>
-              {computedChange > 0 && !itemChange && (
-                <span className="text-[9px] text-emerald-700 font-mono font-bold mt-1 block">
-                  Recommandé : {computedChange.toFixed(2)} €
-                </span>
-              )}
-            </div>
-
-            {/* Pourboire du client - Facultatif */}
-            <div>
-              <label id="input-label-tip" htmlFor="item-tip" className="block text-[10px] font-mono font-bold text-slate-500 uppercase mb-1.5 flex items-center gap-1">
-                <Gift className="w-3.5 h-3.5 text-amber-600" />
-                Pourboire (Facultatif)
-              </label>
-              <div className="relative">
-                <input
-                  id="item-tip"
-                  type="text"
-                  readOnly
-                  inputMode="none"
-                  onClick={() => setActiveInput("tip")}
-                  value={itemTip}
-                  placeholder="0.00"
-                  className="w-full text-xs font-bold font-mono border-2 border-[#141414] rounded-none pl-3 pr-8 py-2 bg-white text-[#141414] focus:outline-none focus:bg-yellow-50 focus:ring-0 placeholder-slate-400 cursor-pointer"
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-700 font-bold text-xs font-mono">€</span>
-              </div>
-            </div>
-            
             {/* Photo de l'article - Facultatif */}
             <div>
               <label className="block text-[10px] font-mono font-bold text-slate-500 uppercase mb-1.5 flex items-center gap-1">
@@ -315,10 +193,10 @@ export default function ManualEntry({
                   Prendre une photo
                 </button>
               ) : (
-                <div className="mt-2 space-y-2">
+                <div className="space-y-2">
                   <div className="flex flex-wrap gap-2">
                     {itemImages.map((img, idx) => (
-                      <div key={idx} className="relative group w-16 h-16 shrink-0">
+                      <div key={idx} className="relative group w-16 h-16 shrink-0 font-sans">
                         <img src={img} alt={`Preview ${idx}`} className="w-full h-full object-cover border-2 border-[#141414]" />
                         <button
                           type="button"
@@ -341,26 +219,9 @@ export default function ManualEntry({
                 </div>
               )}
             </div>
-            
-            {/* Commentaire de l'article - Facultatif */}
-            <div className="md:col-span-2">
-              <label htmlFor="item-comment" className="block text-[10px] font-mono font-bold text-slate-500 uppercase mb-1.5">
-                Commentaire supplémentaire (Facultatif)
-              </label>
-              <input
-                id="item-comment"
-                type="text"
-                readOnly
-                inputMode="none"
-                onClick={() => setActiveInput("comment")}
-                value={itemComment}
-                placeholder="Ex. Emballage abîmé, client habituel..."
-                className="w-full text-sm font-mono border-2 border-[#141414] rounded-none px-3 py-2 bg-white text-[#141414] focus:outline-none focus:bg-yellow-50 focus:ring-0 placeholder-neutral-400 font-medium transition-all cursor-pointer"
-              />
-            </div>
 
             {/* État de l'article */}
-            <div className="md:col-span-3 pb-2">
+            <div className="md:col-span-2 pb-2">
               <label className="block text-[10px] font-mono font-bold text-slate-500 uppercase mb-2">
                 État de l'article (Facultatif)
               </label>
@@ -417,17 +278,13 @@ export default function ManualEntry({
 
       {activeInput && (
         <VirtualKeyboard
-          type={activeInput === "name" || activeInput === "comment" ? "text" : "numeric"}
+          type={activeInput === "code" ? "numeric" : "text"}
           value={getKeyboardValue()}
           onChange={setKeyboardValue}
           onClose={() => setActiveInput(null)}
           placeholder={
-            activeInput === "name" ? "Ex. BAGUETTE CHAUDE..." :
-            activeInput === "comment" ? "Commentaire..." :
-            activeInput === "price" ? "0.00" :
-            activeInput === "cash" ? (itemPrice ? parseFloat(itemPrice).toFixed(2) : "0.00") :
-            activeInput === "change" ? (computedChange > 0 ? computedChange.toFixed(2) : "Calcul Automatique") :
-            "0.00"
+            activeInput === "code" ? "Ex. 847293..." :
+            "Commentaire..."
           }
         />
       )}
